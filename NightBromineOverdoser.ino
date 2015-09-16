@@ -27,8 +27,10 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7,3,POSITIVE);  // Set the LCD I2C
 
 bool isNight = 0;
 bool dosing = 0;
+int minValveON = 10;
+int minValveOFF = 15;
 int  list;
-float sp=2.0;
+float setpoint=2.0;
 
 void setup(){
   
@@ -42,30 +44,37 @@ void setup(){
   //mount menu hierchy
   r=tree.addMenu(MW_ROOT,NULL,F("Opcions"));
     s1=tree.addMenu(MW_VAR,r, F("Establir setpoint"));
-      s1->addVar(MW_AUTO_FLOAT,&sp,0,5.0,0.1);  
+      s1->addVar(MW_AUTO_FLOAT,&setpoint,0,5.0,0.1);  
     s1=tree.addMenu(MW_VAR,r, F("Forcar dosificacio"));
-      
-        s1->addVar(MW_LIST,&list);
-        s1->addItem(MW_LIST, F("Activada"));
-        s1->addItem(MW_LIST, F("Desactivada"));
-        s1->addItem(MW_LIST, F("Automatica"));
-      
+      s1->addVar(MW_LIST,&list);
+      s1->addItem(MW_LIST, F("Activada"));
+      s1->addItem(MW_LIST, F("Desactivada"));
+      s1->addItem(MW_LIST, F("Automatica"));
+    s1=tree.addMenu(MW_SUBMENU,r, F("Temps dosificacio"));
+      s2=tree.addMenu(MW_VAR,s1, F("Temps valvula ON"));
+        s2->addVar(MW_AUTO_INT,&minValveON,0,60,1);   
+      s2=tree.addMenu(MW_VAR,s1, F("Temps valvula OFF"));
+        s2->addVar(MW_AUTO_INT,&minValveOFF,0,60,1);  
   tree.navButtons(UP_BOTTON_PIN,DOWN_BOTTON_PIN,ESCAPE_BOTTON_PIN,CONFIRM_BOTTON_PIN);
  
   tree.addUsrScreen(*showSummary, 20000);
-
+  
+  tree.readEeprom();
 }
 
 void loop(){
-   isNight=digitalRead(3);
-   tree.draw(); 
+  isNight=digitalRead(3);
+  dosing=isDosing();
+  tree.draw(); 
   
+  
+  tree.writeEeprom();  
 }
 
 void showSummary (){
   char setp[4];
   //String setpoint = sp;
-  dtostrf(sp,1,2,setp);
+  dtostrf(setpoint,1,2,setp);
   String linea1="Brom: 1.75 ppm | ";
   String linea2;
   if (isNight==1){
@@ -83,11 +92,10 @@ void showSummary (){
 }
 bool isDosing (){
   if ( isNight ){
-    dosing=1;
     return true;
   }
   else{
-    dosing = 0;
     return false;
+  }
 }
 
